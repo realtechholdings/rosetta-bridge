@@ -58,7 +58,7 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
       const $el = $(el);
       const text = $el.text().trim();
       const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
-      const element = el as cheerio.Element;
+      const element = el as unknown as { tagName: string; attribs?: Record<string, string> };
       
       // Only include elements with meaningful content
       if (wordCount >= 3 && !text.includes('{') && !text.includes('{{')) {
@@ -94,10 +94,9 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
 }
 
 // Build a unique CSS selector for an element
-function buildSelector($: cheerio.CheerioAPI, el: cheerio.Element | AnyNode): string {
-  const $el = $(el);
-  const element = el as cheerio.Element;
-  let selector = element.tagName.toLowerCase();
+function buildSelector($: cheerio.CheerioAPI, el: any): string {
+  const element = el;
+  let selector = element.tagName?.toLowerCase() || 'div';
   
   // Add ID if present
   if (element.attribs?.id) {
@@ -106,19 +105,9 @@ function buildSelector($: cheerio.CheerioAPI, el: cheerio.Element | AnyNode): st
   
   // Add classes
   if (element.attribs?.class) {
-    const classes = element.attribs.class.split(/\s+/).filter(c => c.length > 0).slice(0, 2);
+    const classes = element.attribs.class.split(/\s+/).filter((c: string) => c.length > 0).slice(0, 2);
     if (classes.length > 0) {
       selector += '.' + classes.join('.');
-    }
-  }
-  
-  // Add nth-child for specificity
-  const parent = element.parent;
-  if (parent) {
-    const siblings = $(parent).children(element.tagName);
-    if (siblings.length > 1) {
-      const index = siblings.index($el) + 1;
-      selector += `:nth-child(${index})`;
     }
   }
   
